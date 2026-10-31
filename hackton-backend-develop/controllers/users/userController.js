@@ -48,30 +48,68 @@ const updateUserProfile = async (req, res) => {
     const foundUser = await userModel.getSingleUser({ id: userId });
 
     if (foundUser) {
+      let updates = {};
+
+      // Allow participants to update additional fields
+      if (foundUser.role === 'Participant') {
+        if (req.body.codingExperience) {
+          updates.codingExperience = req.body.codingExperience;
+        }
+        if (req.body.gitProfile) {
+          updates.gitProfile = req.body.gitProfile;
+        }
+        if (req.body.linkedinProfile) {
+          updates.linkedinProfile = req.body.linkedinProfile;
+        }
+        if (req.body.education) {
+          updates.education = req.body.education;
+        }
+        if (req.body.organization) {
+          updates.organization = req.body.organization;
+        }
+        if (req.body.instituteName) {
+          updates.instituteName = req.body.instituteName;
+        }
+        if (req.body.languages) {
+          updates.languages = req.body.languages;
+        }
+      }
+
+      // Allow both organizers and participants to update common fields
       if (req.file) {
-        const currentImage = await JSON.parse(foundUser.image_url);
+        const currentImage = JSON.parse(foundUser.image_url);
         req.body.image_url = [
           { avatar: req.file.secure_url, public_id: req.file.public_id }
         ];
         cloudinary.deleteCloudImage(currentImage);
-      } else {
-        req.body.image_url = '';
+        updates.image_url = req.body.image_url;
       }
-      const updates = {
-        email: req.body.email || foundUser.email,
-        username: req.body.username || foundUser.username,
-        fullname: req.body.fullname || foundUser.fullname,
-        bio: req.body.bio || foundUser.bio,
-        image_url: req.body.image_url || foundUser.image_url
-      };
+
+      if (req.body.email && req.body.email !== foundUser.email) {
+        updates.email = req.body.email;
+      }
+
+      if (req.body.username && req.body.username !== foundUser.username) {
+        updates.username = req.body.username;
+      }
+
+      if (req.body.fullname && req.body.fullname !== foundUser.fullname) {
+        updates.fullname = req.body.fullname;
+      }
+
+      if (req.body.bio && req.body.bio !== foundUser.bio) {
+        updates.bio = req.body.bio;
+      }
+
       const userUpdates = await userModel.updateUser(updates, userId);
       return requestHandler.success(res, 200, 'Profile updated successfully', {
         userUpdates
       });
     }
+
     return requestHandler.error(res, 400, `You are not authorized to do this`);
   } catch (error) {
-    return requestHandler.error(res, 500, `server error ${error.message}`);
+    return requestHandler.error(res, 500, `Server error: ${error.message}`);
   }
 };
 

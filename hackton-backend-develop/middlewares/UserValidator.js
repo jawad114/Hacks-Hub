@@ -21,7 +21,7 @@ module.exports = class UserValidator {
    * @returns {obj} Validation error messages or contents of req.body
    */
   static async userInput(req, res, next) {
-    const { email, password,fullname,username,mobile,country,region,DOB,role} = req.body;
+    const { email, password, fullname, username, mobile, country, region, DOB, role } = req.body;
     const { id } = req.params;
 
     const check = checkItem({
@@ -35,22 +35,20 @@ module.exports = class UserValidator {
       DOB,
       role
     });
+
     if (Object.keys(check).length > 0) {
       return res.status(400).json({
         statusCode: 400,
         check
       });
     }
+
     const userEmail = await userModel.getUserBy({ email });
-    let existingUser;
     if (userEmail !== undefined) {
-      existingUser = `email ${email}`;
-    }
-    if (existingUser) {
       return requestHandler.error(
         res,
         409,
-        `User with ${existingUser} already exist`
+        `User with email ${email} already exists`
       );
     }
 
@@ -66,26 +64,38 @@ module.exports = class UserValidator {
       DOB,
       role
     });
+
     if (id) {
       if (role) {
-        await organizerModel.addTeamMember({
-          user_id: newUser.id,
-          event_id: id,
-          role_type: role
-        });
-        // eslint-disable-next-line require-atomic-updates
-        req.newuser = newUser;
-        next();
+        if (role === 'Participant') {
+          // Add participant-specific fields only if the role is "Participant"
+          await participantModel.addParticipantDetails({
+            user_id: newUser.id,
+            coding_experience: req.body.coding_experience,
+            git_profile: req.body.git_profile,
+            linkedin_profile: req.body.linkedin_profile,
+            education: req.body.education,
+            organization: req.body.organization,
+            institute_name: req.body.institute_name,
+            languages: req.body.languages
+          });
+        } else {
+          // If the role is not "Participant", add to team or event as appropriate
+          await organizerModel.addTeamMember({
+            user_id: newUser.id,
+            event_id: id,
+            role_type: role
+          });
+        }
       }
+      
       await teamModel.addTeamMate({
         team_id: id,
         team_member: newUser.id
       });
-      // eslint-disable-next-line require-atomic-updates
-      req.newuser = newUser;
-      next();
     }
-    // eslint-disable-next-line require-atomic-updates
+
+    // Attach the new user object to the request and proceed to the next middleware
     req.newuser = newUser;
     next();
   }

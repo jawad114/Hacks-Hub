@@ -6,6 +6,7 @@ const categoriesRoutes = require('./categories.js');
 const usersRoutes = require('./users');
 const { googleAuthStrategy } = require('../api/auth/googleStrategy');
 const { githubAuthStrategy } = require('../api/auth/githubStrategy');
+const { chatBot } = require('../controllers/botController/botController.js');
 
 const router = Router();
 
@@ -21,6 +22,7 @@ googleAuthStrategy();
 githubAuthStrategy();
 
 router.use('/auth', authRoutes);
+router.use('/chat-bot', chatBot);
 router.use('/events', eventRoutes);
 router.use('/event-category', categoriesRoutes);
 router.use('/users', usersRoutes);
